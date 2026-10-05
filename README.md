@@ -13,7 +13,7 @@ their parents, and the teachers and schools who would pilot it.
 
 | File | Purpose |
 |---|---|
-| `index.html` | The landing page. All fourteen sections: header, hero, credibility strip, problem, how it works, capabilities, career-matching preview, audiences, roadmap, team, FAQ, waitlist, partner enquiry, footer. |
+| `index.html` | The landing page. All fourteen sections: header, hero, credibility strip, problem, how it works, capabilities, career-matching preview, audiences, roadmap, team, FAQ, waitlist, partner enquiry, footer. Both Tally forms open in modals at the foot of the file. |
 | `thanks.html` | Post-submit confirmation. Point Tally's "redirect on submit" here. |
 | `privacy.html` | **Placeholder.** Explains what the waitlist collects and what the policy still has to cover. Not a policy. Linked from the form consent text and the footer. |
 | `terms.html` | **Placeholder.** Lists what the real terms must settle. Linked from the footer. |
@@ -47,24 +47,32 @@ the four HTML files need touching; nothing else assumes a location.
 
 ---
 
-## 3. Tally forms — the two IDs to paste
+## 3. Tally forms — the two form URLs
 
-Two forms, one place to edit. Open `js/main.js` and replace the two placeholders in the
-`TALLY` object near the top:
+Two forms, one place to edit. Open `js/main.js` and set both URLs in the `TALLY` object
+near the top. **Both forms now open in a modal**, so there is no form URL anywhere in the
+HTML — the dialogs build their own iframes from this object.
 
 ```js
 const TALLY = {
-  waitlist: "https://tally.so/embed/REPLACE_WAITLIST_ID",   // ← Form A, inline, section 12
-  contact:  "https://tally.so/embed/REPLACE_CONTACT_ID"     // ← Form B, popup, section 13
+  waitlist: "https://tally.so/embed/Npepop",              // ← Form A, already set
+  contact:  "https://tally.so/embed/REPLACE_CONTACT_ID"   // ← Form B, still to paste
 };
 ```
 
-Get each URL from Tally: **Share → Embed**, copy the `https://tally.so/embed/XXXXXX`
-URL, and paste it in whole. Nothing else needs editing — the two iframes in `index.html`
-and the contact modal all read from this object.
+**Status: the waitlist URL is filled in (`Npepop`). The contact/enquiry URL is still a
+placeholder.** Get it from Tally: **Share → Embed**, copy the `https://tally.so/embed/XXXXXX`
+URL, and paste it in whole.
 
-Until the IDs are pasted, the page does not show an empty box. Each embed is replaced by
-a visible sentence with a direct link to the form, so the page is never broken.
+While a URL is missing, the dialog does not show an empty box — it shows a written
+fallback with a direct link to `hello@edpal.co.ke`. The same fallback appears if the Tally
+widget is blocked or offline.
+
+**Shell colours.** Tally renders its own light palette, so both dialog shells are a fixed
+light surface with fixed dark text; they are deliberately **not** wired to the page theme
+(see `css/main.css`, section 16). A page-themed shell would put dark chrome around a light
+form in dark mode. If Tally is ever switched to render in dark, the shell tokens have to
+change with it.
 
 **Also do these two things in Tally:**
 
@@ -76,12 +84,11 @@ a visible sentence with a direct link to the form, so the page is never broken.
    `landing_waitlist` or `landing_enquiry`; the UTM values are read from the landing
    page's own query string and fall back to `direct`.
 
-> **Unverified in this build:** I could not run the page against a live Tally account, so
-> the hidden-field prefill behaviour is set up to Tally's documented convention but has
-> not been confirmed end-to-end. Submit one test entry per form and check the response
-> in Tally before launch.
+> **Unverified in this build:** I could not run the page against a live Tally account, and
+> headless Chrome is blocked in the authoring sandbox, so neither embed has been seen
+> rendering. Submit one test entry per form and check the response in Tally before launch.
 
-### Form A — waitlist (inline, section 12)
+### Form A — waitlist (modal, section 12)
 
 Full name; email; *"I am a…"* (learner, parent/guardian, teacher, careers master, school
 admin, other); phone/WhatsApp with `+254` default; county (Kenyan counties); school or
@@ -91,7 +98,7 @@ you hear about us; product-updates consent; and a required **privacy consent** c
 linking `privacy.html`. The two consents stay separate — early access must not depend on
 agreeing to marketing.
 
-### Form B — get in touch (popup, section 13)
+### Form B — get in touch (modal, section 13)
 
 Full name; email; organisation; reason for contact (feature request, partnership or
 sponsorship, bring EdPal to our school, report a bug, join the team, media and press,
@@ -201,8 +208,9 @@ does not contradict the copy** — if it shows something EdPal cannot do, do not
    should submit the form with an under-18. That sentence needs sign-off, and the
    published policy needs the matching clause.
 6. **A real Open Graph image** in `assets/screenshots/`.
-7. **Tally form IDs pasted**, hidden fields added, redirect to `thanks.html` set, and one
-   test submission per form.
+7. **The contact/enquiry Tally URL** pasted into `TALLY.contact` in `js/main.js` (the
+   waitlist URL is already set), hidden fields added to both forms, redirect to
+   `thanks.html` set, and one test submission per form.
 8. **Confirmed contact mailbox** for `hello@edpal.co.ke`.
 
 ---
@@ -222,12 +230,16 @@ does not contradict the copy** — if it shows something EdPal cannot do, do not
   `"light"` means light and anything else means dark, applied as `<html class="theme-dark">`.
   The anti-flash script is inline in `<head>` above the stylesheets, wrapped in
   `try/catch` because storage can be unavailable.
-- **Single dark surface.** The hero band is the only gradient on the page. The page
-  background is flat `--alt-bg` or `--alt-surface-mut`; the product panel inside the hero
-  uses its own fixed dark tokens so it reads as a screen sitting on the band rather than
-  as more band.
+- **Single dark surface.** The hero band is a flat, solid navy (`#141C2F`) — no gradient.
+  *This was changed after review:* the first draft used the product's navy radial-gradient
+  treatment, which at full page width read as decoration and made the page feel generated.
+  There is now **no gradient anywhere on the site**. The page background is flat `--alt-bg`
+  or `--alt-surface-mut`; the product panel inside the hero uses its own fixed dark tokens
+  so it reads as a screen sitting on the band rather than as more band.
 - **One primary button per screenful.** The hero and the waitlist section each have one;
   every other call to action is secondary or ghost.
+- **Both Tally dialogs use a fixed light shell**, independent of `html.theme-dark`, because
+  Tally renders its own light palette. See §3.
 - **No webfonts other than JetBrains Mono**, at weights 400 and 500, used only for
   numbers. UI text uses the system stack.
 - **No JavaScript dependencies.** `js/main.js` is plain ES5-compatible-style modern JS

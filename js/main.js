@@ -2,12 +2,12 @@
    EdPal landing page — behaviour
    --------------------------------------------------------------------------
    No dependencies. Loaded with `defer`. Responsibilities:
-     1. Tally configuration (the only place form IDs are set)
-     2. Attribution parameters appended to the Tally embed URLs
+     1. Tally configuration (the only place form URLs are set)
+     2. Attribution parameters appended to those URLs
      3. Theme toggle — shares the app-wide "reg_theme" preference
      4. Mobile navigation (Escape to close, focus management)
-     5. FAQ accordion (roving focus, arrow keys)
-     6. Tally popup modal for the partner/enquiry form
+     5. FAQ accordion (arrow-key navigation)
+     6. The two Tally modals (waitlist and enquiry)
      7. Footer year
    ========================================================================== */
 
@@ -15,24 +15,20 @@
   'use strict';
 
   /* ══ 1. TALLY CONFIGURATION ═══════════════════════════════════════════
-     Paste the two Tally form IDs here. Nothing else in the project needs
-     editing — every embed and popup reads from this object.
-
-     Replace REPLACE_WAITLIST_ID and REPLACE_CONTACT_ID with the numeric IDs
-     from Tally (Share → Embed). The values below are placeholders; the page
-     detects that and degrades to a visible link instead of an empty box.
+     Paste the two Tally form URLs here. Nothing else in the project needs
+     editing — both modals read from this object and build their iframes from
+     it, so there are no form URLs buried in the HTML.
   ══════════════════════════════════════════════════════════════════════ */
 
   var TALLY = {
-    waitlist: 'https://tally.so/embed/REPLACE_WAITLIST_ID',
+    waitlist: 'https://tally.so/embed/Npepop',
     contact:  'https://tally.so/embed/REPLACE_CONTACT_ID'
   };
 
-  /* Query-string parameters Tally reads and applies to the matching hidden
-     fields in both forms. See README — the hidden fields must exist in the
-     Tally form builder for these to be recorded. */
+  /* Query-string parameters Tally reads and applies to matching hidden fields
+     in both forms. See README — those hidden fields must exist in the Tally
+     form builder for the values to be recorded. */
   var TRACKING = {
-    source:       'landing_waitlist',
     utm_source:   '',
     utm_campaign: ''
   };
@@ -56,8 +52,8 @@
   }
 
   /* ══ 2. ATTRIBUTION ═══════════════════════════════════════════════════
-     utm_source / utm_campaign come from the page URL if present; `source`
-     identifies the block that produced the signup (waitlist or enquiry).
+     utm_source / utm_campaign are read from the page URL when present;
+     `source` identifies which form produced the submission.
   ══════════════════════════════════════════════════════════════════════ */
 
   function incomingParam(name) {
@@ -79,6 +75,8 @@
   /* ══ 3. THEME ═════════════════════════════════════════════════════════
      localStorage key "reg_theme": "light" means light, anything else is dark.
      The initial class is applied by the inline script in <head>.
+
+     Nothing inside the Tally modals is themed — see css/main.css section 16.
   ══════════════════════════════════════════════════════════════════════ */
 
   var THEME_KEY = 'reg_theme';
@@ -114,9 +112,9 @@
   /* ══ 4. MOBILE NAVIGATION ════════════════════════════════════════════ */
 
   function initMobileNav() {
-    var toggle  = document.getElementById('navToggle');
-    var panel   = document.getElementById('mobileNav');
-    var scrim   = document.getElementById('navScrim');
+    var toggle = document.getElementById('navToggle');
+    var panel  = document.getElementById('mobileNav');
+    var scrim  = document.getElementById('navScrim');
     if (!toggle || !panel || !scrim) return;
 
     var closeBtn = panel.querySelector('[data-nav-close]');
@@ -127,7 +125,6 @@
       lastFocus = document.activeElement;
       panel.hidden = false;
       scrim.hidden = false;
-      // next frame, so the transform transition runs
       requestAnimationFrame(function () { panel.setAttribute('data-open', 'true'); });
       toggle.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
@@ -154,8 +151,7 @@
     if (closeBtn) closeBtn.addEventListener('click', close);
 
     panel.addEventListener('click', function (event) {
-      var link = event.target.closest('a[href]');
-      if (link) close();
+      if (event.target.closest('a[href]')) close();
     });
 
     document.addEventListener('keydown', function (event) {
@@ -163,7 +159,6 @@
       if (toggle.getAttribute('aria-expanded') === 'true') close();
     });
 
-    // Keep the panel's state honest if the viewport grows past the breakpoint.
     window.addEventListener('resize', function () {
       if (window.innerWidth > 900 && toggle.getAttribute('aria-expanded') === 'true') {
         panel.setAttribute('data-open', 'false');
@@ -205,126 +200,161 @@
     });
   }
 
-  /* ══ 6. TALLY POPUP MODAL ════════════════════════════════════════════ */
+  /* ══ 6. TALLY MODALS ═════════════════════════════════════════════════
+     Each modal builds its iframe from TALLY on first open, so the form URL
+     lives in exactly one place. If that URL is still a placeholder, or the
+     Tally widget never loads, the dialog shows a written fallback with a
+     direct link instead of an empty box.
+  ══════════════════════════════════════════════════════════════════════ */
 
-  function initModal() {
-    var modal = document.getElementById('contactModal');
-    if (!modal) return;
+  var tallyScriptRequested = false;
+  var tallyWidgetLoaded = false;
 
-    var dialog     = modal.querySelector('.modal__dialog');
-    var closeBtn   = modal.querySelector('[data-modal-close]');
-    var overlay    = modal.querySelector('.modal__overlay');
-    var embed      = modal.querySelector('[data-tally-modal]');
-    var fallback   = modal.querySelector('[data-tally-modal-fallback]');
-    var lastFocus  = null;
-    var configured = false;
+  function loadTallyWidget() {
+    if (tallyScriptRequested) return;
+    tallyScriptRequested = true;
 
-    function open() {
-      lastFocus = document.activeElement;
-      modal.hidden = false;
-      document.body.classList.add('modal-open');
+    if (document.querySelector('script[src*="tally.so"]')) {
+      tallyWidgetLoaded = true;
+      return;
+    }
 
-      if (!configured && embed) {
-        if (isConfigured(TALLY.contact)) {
-          embed.setAttribute('src', withParams(TALLY.contact, trackingFor('landing_enquiry')));
-          embed.hidden = false;
-          if (fallback) fallback.hidden = true;
-          configured = true;
-        } else if (fallback) {
-          // No form ID pasted yet, or Tally blocked — the dialog still helps.
-          embed.hidden = true;
-          fallback.hidden = false;
-        }
+    var script = document.createElement('script');
+    script.src = 'https://tally.so/widgets/embed.js';
+    script.async = true;
+    script.onload = function () {
+      tallyWidgetLoaded = true;
+      if (typeof window.Tally !== 'undefined' && window.Tally.loadEmbeds) {
+        window.Tally.loadEmbeds();
+      } else {
+        showEmbedFallbacks();
       }
+    };
+    script.onerror = showEmbedFallbacks;
+    document.body.appendChild(script);
+  }
 
-      window.loadTallyEmbeds && window.loadTallyEmbeds();
-      if (closeBtn) closeBtn.focus();
-    }
-
-    function close() {
-      modal.hidden = true;
-      document.body.classList.remove('modal-open');
-      if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
-    }
-
-    Array.prototype.forEach.call(document.querySelectorAll('[data-open-contact]'), function (button) {
-      button.addEventListener('click', open);
-    });
-
-    if (closeBtn) closeBtn.addEventListener('click', close);
-    if (overlay) overlay.addEventListener('click', close);
-
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && !modal.hidden) close();
-      if (event.key !== 'Tab' || modal.hidden) return;
-
-      var focusables = Array.prototype.filter.call(
-        dialog.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'),
-        function (el) { return el.offsetParent !== null; }
-      );
-      if (!focusables.length) return;
-
-      var first = focusables[0];
-      var last  = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  function showEmbedFallbacks() {
+    tallyWidgetLoaded = false;
+    Array.prototype.forEach.call(document.querySelectorAll('.tally-embed'), function (shell) {
+      var iframe = shell.querySelector('iframe[data-tally-iframe]');
+      var fallback = shell.querySelector('[data-tally-fallback]');
+      if (!iframe || !fallback) return;
+      iframe.hidden = true;
+      fallback.hidden = false;
     });
   }
 
-  /* ══ 7. TALLY EMBEDS + GRACEFUL DEGRADATION ══════════════════════════ */
-
   function initEmbeds() {
-    var embeds = Array.prototype.slice.call(document.querySelectorAll('.tally-embed'));
+    Array.prototype.forEach.call(document.querySelectorAll('.tally-embed'), function (shell) {
+      var key = shell.getAttribute('data-tally-form');
+      var iframe = shell.querySelector('iframe[data-tally-iframe]');
+      var fallback = shell.querySelector('[data-tally-fallback]');
+      if (!iframe || !fallback) return;
 
-    embeds.forEach(function (shell) {
-      var source   = shell.getAttribute('data-tally-form');
-      var iframe   = shell.querySelector('iframe[data-tally-src]');
-      var fallback = shell.querySelector('.form-fallback');
-      var url      = TALLY[source];
-
-      if (!iframe) return;
-
+      var url = TALLY[key];
       if (!isConfigured(url)) {
+        // Not configured yet: leave the written fallback on screen.
         iframe.hidden = true;
-        if (fallback) fallback.hidden = false;
+        fallback.hidden = false;
         return;
       }
 
-      iframe.setAttribute('data-tally-src', withParams(url, trackingFor('landing_' + source)));
-      iframe.hidden = false;
-      if (fallback) fallback.hidden = true;
+      iframe.setAttribute('data-tally-src', withParams(url, trackingFor('landing_' + key)));
+      fallback.hidden = true;
     });
 
-    // Tally replaces data-tally-src with src and sizes the iframe itself.
-    if (!document.querySelector('script[src*="tally.so"]')) {
-      var script = document.createElement('script');
-      script.src = 'https://tally.so/widgets/embed.js';
-      script.async = true;
-      script.onerror = showEmbedFallbacks;
-      document.body.appendChild(script);
-    }
+    loadTallyWidget();
 
-    // If the widget never announces itself, offer the plain links instead.
+    // If the widget never identifies itself, fall back to the written links.
     window.setTimeout(function () {
       if (typeof window.Tally === 'undefined') showEmbedFallbacks();
     }, 6000);
   }
 
-  function showEmbedFallbacks() {
-    Array.prototype.forEach.call(document.querySelectorAll('.tally-embed'), function (shell) {
-      var iframe   = shell.querySelector('iframe[data-tally-src]');
-      var fallback = shell.querySelector('.form-fallback');
-      if (!iframe || !fallback) return;
-      var src = iframe.getAttribute('src') || iframe.getAttribute('data-tally-src') || '';
-      if (!src || PLACEHOLDER.test(src)) return;
-      iframe.hidden = true;
-      fallback.hidden = false;
-      var link = fallback.querySelector('a[data-tally-link]');
-      if (link) link.setAttribute('href', src.replace(/[?&](alignLeft|hideTitle|transparentBackground|dynamicHeight)=[^&]*/g, '').replace(/[?&]$/, ''));
+  function initTallyModal() {
+    var modals = Array.prototype.slice.call(document.querySelectorAll('.modal'));
+    if (!modals.length) return;
+
+    var openButton = null;
+    var lastFocus = null;
+
+    function configure(modal) {
+      var iframe = modal.querySelector('iframe[data-tally-iframe]');
+      if (!iframe) return;
+      var src = iframe.getAttribute('data-tally-src');
+      if (!src) return;
+      if (iframe.getAttribute('src') !== src) iframe.setAttribute('src', src);
+      iframe.hidden = false;
+      var fallback = modal.querySelector('[data-tally-fallback]');
+      if (fallback) fallback.hidden = true;
+    }
+
+    function open(modal) {
+      lastFocus = document.activeElement;
+      modal.hidden = false;
+      document.body.classList.add('modal-open');
+
+      configure(modal);
+      loadTallyWidget();
+      if (tallyWidgetLoaded && typeof window.Tally !== 'undefined' && window.Tally.loadEmbeds) {
+        window.Tally.loadEmbeds();
+      }
+
+      var closeBtn = modal.querySelector('[data-modal-close]');
+      if (closeBtn) closeBtn.focus();
+    }
+
+    function close(modal) {
+      modal.hidden = true;
+      document.body.classList.remove('modal-open');
+      var focusTarget = lastFocus && lastFocus.isConnected ? lastFocus : openButton;
+      if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
+    }
+
+    function openModalFor(button) {
+      var id = button.getAttribute('data-tally-open');
+      var modal = document.getElementById(id === 'contact' ? 'contactModal' : 'waitlistModal');
+      if (!modal) return;
+      openButton = button;
+      open(modal);
+    }
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-tally-open], [data-open-contact]'),
+      function (button) {
+        button.addEventListener('click', function () { openModalFor(button); });
+      }
+    );
+
+    modals.forEach(function (modal) {
+      Array.prototype.forEach.call(modal.querySelectorAll('[data-modal-close]'), function (el) {
+        el.addEventListener('click', function () { close(modal); });
+      });
+
+      // Tab stays inside the dialog while it is open.
+      modal.addEventListener('keydown', function (event) {
+        if (event.key !== 'Tab') return;
+        var dialog = modal.querySelector('.modal__dialog');
+        var focusables = Array.prototype.filter.call(
+          dialog.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'),
+          function (el) { return el.offsetParent !== null; }
+        );
+        if (!focusables.length) return;
+        var first = focusables[0];
+        var last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      modals.forEach(function (modal) { if (!modal.hidden) close(modal); });
     });
   }
 
-  /* ══ 8. FOOTER YEAR ══════════════════════════════════════════════════ */
+  /* ══ 7. FOOTER YEAR ══════════════════════════════════════════════════ */
 
   function initYear() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-year]'), function (el) {
@@ -338,8 +368,8 @@
     initTheme();
     initMobileNav();
     initFaq();
-    initModal();
     initEmbeds();
+    initTallyModal();
     initYear();
   }
 

@@ -128,13 +128,14 @@ html.theme-dark {
    The hero band and the product panel sitting on it are navy in both themes.
    These tokens are therefore defined once and never remapped by theme-dark —
    white-on-navy copy stays legible either way.
+
+   The band is a FLAT colour by design. An earlier draft used the product's
+   navy radial-gradient treatment; at full page width it read as decorative and
+   gave the page a generated feel. One solid navy, no gradient.
    ------------------------------------------------------------------------ */
 
 :root {
-  --hp-hero-bg:
-    radial-gradient(circle at 82% 18%, rgba(99, 91, 255, .55), transparent 46%),
-    radial-gradient(circle at 12% 92%, rgba(20, 184, 166, .28), transparent 52%),
-    linear-gradient(135deg, #101828 0%, #172033 55%, #1B2540 100%);
+  --hp-hero-bg: #141C2F;
 
   --hp-on-dark:       #FFFFFF;
   --hp-on-dark-2:     rgba(255, 255, 255, .72);
