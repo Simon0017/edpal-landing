@@ -6,13 +6,15 @@
 
   <title>EdPal — self-evaluation and career recommendations for Kenyan learners</title>
   <meta name="description" content="A Kenya-based assessment platform that helps learners aged 12 to 18 find their strengths and match them to courses and careers, following the KUCCPS model. Join the early access waitlist." />
-  <link rel="canonical" href="#" />
+  <!-- TODO(team): point this at the live URL before launch. A canonical of "#"
+       de-indexes the page, which is worse than having no canonical at all. -->
+  <link rel="canonical" href="https://edpal.co.ke/" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="EdPal" />
   <meta property="og:title" content="EdPal — know what you are good at before you choose a course" />
   <meta property="og:description" content="Self-evaluation and career recommendations for learners aged 12 to 18 in Kenya. Adaptive assessments, instant scores, and ranked course and career matches that explain themselves." />
-  <meta property="og:url" content="#" />
+  <meta property="og:url" content="https://edpal.co.ke/" />
   <!-- TODO(team): replace with a real 1200x630 Open Graph image. See README — assets/screenshots/ is empty. -->
   <meta property="og:image" content="assets/logo.png" />
   <meta property="og:image:alt" content="EdPal logo" />
@@ -22,22 +24,27 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- The only webfont on the page, and only for numbers: scores, percentiles,
-       dates, counts. UI text uses the system stack, as in the product. -->
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Plus Jakarta Sans sets headings and UI titles; Nunito Sans carries body
+       copy. JetBrains Mono is still numbers only: scores, percentiles, dates,
+       counts and cutoff figures. See css/tokens.css for why these two. -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Nunito+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/main.css" />
 
   <!-- Anti-flash: must run before the first paint, so it sits above the
-       stylesheets in document order. Shares the product's key and contract. -->
+       stylesheets in document order. Shares the product's key and contract.
+       The motion flag is set in the same pass: elements only start hidden if
+       this script has confirmed it can reveal them again. -->
   <script>
     (function () {
+      var root = document.documentElement;
       try {
         if (localStorage.getItem('reg_theme') !== 'light') {
-          document.documentElement.classList.add('theme-dark');
+          root.classList.add('theme-dark');
         }
       } catch (e) { /* storage unavailable — stay light */ }
+      root.classList.add('js-motion');
     })();
   </script>
 </head>
@@ -58,6 +65,7 @@
       <nav class="site-nav" aria-label="Main">
         <ul class="site-nav__list">
           <li><a class="site-nav__link" href="#how-it-works">How it works</a></li>
+          <li><a class="site-nav__link" href="#demo">Demo</a></li>
           <li><a class="site-nav__link" href="#what-it-does">What it does</a></li>
           <li><a class="site-nav__link" href="#for-schools">For schools</a></li>
           <li><a class="site-nav__link" href="#faq">FAQ</a></li>
@@ -105,6 +113,7 @@
     </div>
     <ul class="mobile-nav__list">
       <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#demo">Demo</a></li>
       <li><a href="#what-it-does">What it does</a></li>
       <li><a href="#for-schools">For schools</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -156,8 +165,9 @@
         <!-- Product panel. Built from the real design tokens and the real
              results/matching structure because assets/screenshots/ is empty.
              Labels are the product's own; values are illustrative and the
-             footer says so. Replace with a real screenshot when one exists. -->
-        <figure class="panel" aria-labelledby="panelCaption">
+             footer says so. Replace with a real screenshot when one exists.
+             .rise-in is the pre-animation state; anime.js removes it. -->
+        <figure class="panel rise-in" aria-labelledby="panelCaption">
           <div class="panel__bar">
             <span class="panel__title">Results &mdash; Sciences</span>
             <span class="panel__meta">Attempt 2 &middot; submitted</span>
@@ -308,7 +318,7 @@
     </section>
 
     <!-- ════════════════════════════════════════════════════════════════
-         HOW IT WORKS
+         HOW IT WORKS  (+ product demo)
     ═════════════════════════════════════════════════════════════════ -->
     <section class="section surface-mut" id="how-it-works" aria-labelledby="howTitle">
       <div class="container">
@@ -319,54 +329,90 @@
           </p>
         </div>
 
-        <ol class="steps">
-          <li class="step">
-            <span class="step__num" aria-hidden="true">01</span>
-            <div>
-              <h3 class="step__title">Create a profile and enrol your subjects</h3>
-              <p class="step__text">
-                Your date of birth, your school subjects and the grades you have so far,
-                and up to four career preferences in the order you would actually rank them.
-              </p>
-            </div>
-          </li>
+        <div class="how__grid">
+          <ol class="steps">
+            <li class="step">
+              <span class="step__num" aria-hidden="true">01</span>
+              <div>
+                <h3 class="step__title">Create a profile and enrol your subjects</h3>
+                <p class="step__text">
+                  Your date of birth, your school subjects and the grades you have so far,
+                  and up to four career preferences in the order you would actually rank them.
+                </p>
+              </div>
+            </li>
 
-          <li class="step">
-            <span class="step__num" aria-hidden="true">02</span>
-            <div>
-              <h3 class="step__title">Take adaptive questionnaires and psychometric tests</h3>
-              <p class="step__text">
-                Multiple-choice, ranking, numeric and open-text questions. Attempts are
-                timed but pausable, so you can resume an assessment on another day
-                without losing your answers.
-              </p>
-            </div>
-          </li>
+            <li class="step">
+              <span class="step__num" aria-hidden="true">02</span>
+              <div>
+                <h3 class="step__title">Take adaptive questionnaires and psychometric tests</h3>
+                <p class="step__text">
+                  Multiple-choice, ranking, numeric and open-text questions. Attempts are
+                  timed but pausable, so you can resume an assessment on another day
+                  without losing your answers.
+                </p>
+              </div>
+            </li>
 
-          <li class="step">
-            <span class="step__num" aria-hidden="true">03</span>
-            <div>
-              <h3 class="step__title">Get scored the moment you submit</h3>
-              <p class="step__text">
-                An overall result, your percentile against other attempts, a pass or fail
-                outcome where the questionnaire sets one, and a breakdown by topic so you
-                can see which parts moved the score.
-              </p>
-            </div>
-          </li>
+            <li class="step">
+              <span class="step__num" aria-hidden="true">03</span>
+              <div>
+                <h3 class="step__title">Get scored the moment you submit</h3>
+                <p class="step__text">
+                  An overall result, your percentile against other attempts, a pass or fail
+                  outcome where the questionnaire sets one, and a breakdown by topic so you
+                  can see which parts moved the score.
+                </p>
+              </div>
+            </li>
 
-          <li class="step">
-            <span class="step__num" aria-hidden="true">04</span>
-            <div>
-              <h3 class="step__title">See ranked career and course matches</h3>
-              <p class="step__text">
-                Each recommendation comes with a written explanation of why it fits you,
-                the subject requirements for the courses behind it, and the cutoff
-                clusters those courses fall into.
-              </p>
+            <li class="step">
+              <span class="step__num" aria-hidden="true">04</span>
+              <div>
+                <h3 class="step__title">See ranked career and course matches</h3>
+                <p class="step__text">
+                  Each recommendation comes with a written explanation of why it fits you,
+                  the subject requirements for the courses behind it, and the cutoff
+                  clusters those courses fall into.
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          <!-- Demo. 1280x532 is 2.41:1, so the frame matches the video's own
+               aspect rather than 16:9. preload="none" keeps 2.5 MB off the
+               initial load; the poster is the only thing fetched up front. -->
+          <div class="demo" id="demo" aria-labelledby="demoTitle">
+            <h3 class="visually-hidden" id="demoTitle">Product demo</h3>
+
+            <div class="demo__frame zoom-in">
+              <video class="demo__video"
+                     controls
+                     playsinline
+                     preload="none"
+                     poster="assets/poster/poster.png"
+                     width="1280" height="532">
+                <source src="assets/EdPal.mp4" type="video/mp4" />
+                Your browser cannot play this video.
+                <a class="tlink" href="assets/EdPal.mp4">Download the demo (MP4, 2.5 MB)</a>.
+              </video>
+
+              <button class="demo__expand" type="button" data-video-open="enlarged"
+                      aria-haspopup="dialog">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15" />
+                </svg>
+                Enlarge
+              </button>
             </div>
-          </li>
-        </ol>
+
+            <p class="demo__note">
+              A short walkthrough of the results screen and how a match is explained.
+              Opens in place &mdash; nothing downloads until you press play.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -540,7 +586,7 @@
             cutoff history behind the courses that lead to it.
           </p>
 
-          <div class="rec" style="margin-top:28px;">
+          <div class="rec slide-in" style="margin-top:28px;">
             <div class="rec__top">
               <span class="pill pill--indigo">#1 recommendation</span>
               <span class="pill pill--teal">Health sciences</span>
@@ -592,7 +638,7 @@
             travel rather than a single number.
           </p>
 
-          <div class="table-wrap">
+          <div class="table-wrap rows-in">
             <table class="cutoff-table">
               <caption>Cluster 7 &mdash; cutoff points by year</caption>
               <thead>
@@ -1192,6 +1238,42 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════
+       ENLARGED VIDEO PLAYER
+       Opened from the Enlarge button on the demo. Escape, the backdrop and
+       the close button all cancel; closing also stops playback.
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="modal modal--video" id="videoModal" role="dialog" aria-modal="true"
+       aria-labelledby="videoModalTitle" hidden>
+    <button class="modal__overlay" type="button" data-modal-close aria-label="Close the enlarged video"></button>
+
+    <div class="modal__dialog">
+      <div class="modal__video-bar">
+        <span class="modal__video-title" id="videoModalTitle">EdPal product demo</span>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Close the enlarged video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+               stroke-linecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <video class="modal__video" controls playsinline preload="metadata"
+             poster="assets/poster/poster.png" width="1280" height="532"
+             aria-label="EdPal product demo, enlarged">
+        <source src="assets/EdPal.mp4" type="video/mp4" />
+        Your browser cannot play this video.
+        <a class="tlink" href="assets/EdPal.mp4">Download the demo (MP4, 2.5 MB)</a>.
+      </video>
+    </div>
+  </div>
+
+  <!-- anime.js v4, UMD build. Exposes window.anime (animate / createTimeline /
+       stagger / eases). Pinned: v4 changed the API from v3 — anime() is now
+       animate(). If this fails to load, js/main.js detects it and reveals
+       every animated element immediately, so the page still reads correctly. -->
+  <script src="https://cdn.jsdelivr.net/npm/animejs@4.2.2/dist/bundles/anime.umd.min.js"
+          crossorigin="anonymous" defer></script>
   <script src="js/main.js" defer></script>
 </body>
 </html>

@@ -1,14 +1,20 @@
 /* ==========================================================================
    EdPal landing page — behaviour
    --------------------------------------------------------------------------
-   No dependencies. Loaded with `defer`. Responsibilities:
+   Dependencies: anime.js v4 (UMD build, loaded from CDN) and the Tally embed
+   widget. Everything degrades to a fully visible, static page if either fails.
+
+   Responsibilities
      1. Tally configuration (the only place form URLs are set)
      2. Attribution parameters appended to those URLs
-     3. Theme toggle — shares the app-wide "reg_theme" preference
-     4. Mobile navigation (Escape to close, focus management)
-     5. FAQ accordion (arrow-key navigation)
-     6. The two Tally modals (waitlist and enquiry)
-     7. Footer year
+     3. Reduced-motion guard (required — anime.js writes inline styles and
+        would otherwise ignore the CSS @media rule)
+     4. Theme toggle — shares the app-wide "reg_theme" preference
+     5. Mobile navigation (Escape to close, focus management)
+     6. FAQ accordion (arrow-key navigation)
+     7. Modals: two Tally forms and the enlarged video player
+     8. Motion — one distinct transition per element
+     9. Footer year
    ========================================================================== */
 
 (function () {
@@ -16,8 +22,7 @@
 
   /* ══ 1. TALLY CONFIGURATION ═══════════════════════════════════════════
      Paste the two Tally form URLs here. Nothing else in the project needs
-     editing — both modals read from this object and build their iframes from
-     it, so there are no form URLs buried in the HTML.
+     editing — both form modals read from this object.
   ══════════════════════════════════════════════════════════════════════ */
 
   var TALLY = {
@@ -25,9 +30,6 @@
     contact:  'https://tally.so/embed/REPLACE_CONTACT_ID'
   };
 
-  /* Query-string parameters Tally reads and applies to matching hidden fields
-     in both forms. See README — those hidden fields must exist in the Tally
-     form builder for the values to be recorded. */
   var TRACKING = {
     utm_source:   '',
     utm_campaign: ''
@@ -51,11 +53,6 @@
     return url;
   }
 
-  /* ══ 2. ATTRIBUTION ═══════════════════════════════════════════════════
-     utm_source / utm_campaign are read from the page URL when present;
-     `source` identifies which form produced the submission.
-  ══════════════════════════════════════════════════════════════════════ */
-
   function incomingParam(name) {
     try {
       return new URLSearchParams(window.location.search).get(name) || '';
@@ -72,21 +69,45 @@
     };
   }
 
+  /* ══ 2. REDUCED MOTION ════════════════════════════════════════════════
+     This MUST be checked in JS. The @media(prefers-reduced-motion) block in
+     main.css neutralises CSS transitions, but anime.js writes inline styles
+     directly and would ignore it — so every animation below is skipped when
+     this is true, and elements are revealed instantly instead.
+  ══════════════════════════════════════════════════════════════════════ */
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function animeReady() {
+    return typeof window.anime !== 'undefined' &&
+           typeof window.anime.animate === 'function';
+  }
+
+  function revealNow(nodes) {
+    Array.prototype.forEach.call(nodes, function (el) {
+      el.style.opacity = '';
+      el.style.transform = '';
+      el.classList.add('motion-done');
+    });
+  }
+
+  // anime.js v4 exposes `eases`; ease(3) === easeOutCubic.
+  function ease(power) {
+    if (window.anime && window.anime.eases) return window.anime.eases.out(power);
+    return 'easeOutCubic';
+  }
+
   /* ══ 3. THEME ═════════════════════════════════════════════════════════
      localStorage key "reg_theme": "light" means light, anything else is dark.
      The initial class is applied by the inline script in <head>.
-
-     Nothing inside the Tally modals is themed — see css/main.css section 16.
   ══════════════════════════════════════════════════════════════════════ */
 
   var THEME_KEY = 'reg_theme';
 
   function isDark() {
     return document.documentElement.classList.contains('theme-dark');
-  }
-
-  function storeTheme(value) {
-    try { localStorage.setItem(THEME_KEY, value); } catch (err) { /* storage unavailable */ }
   }
 
   function initTheme() {
@@ -102,7 +123,8 @@
     toggle.addEventListener('click', function () {
       var dark = !isDark();
       document.documentElement.classList.toggle('theme-dark', dark);
-      storeTheme(dark ? 'dark' : 'light');
+      try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); }
+      catch (err) { /* storage unavailable */ }
       sync();
     });
 
@@ -140,7 +162,7 @@
         panel.hidden = true;
         scrim.hidden = true;
       }, 200);
-      if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      if (lastFocus && lastFocus.isConnected) lastFocus.focus();
     }
 
     toggle.addEventListener('click', function () {
@@ -155,8 +177,7 @@
     });
 
     document.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape') return;
-      if (toggle.getAttribute('aria-expanded') === 'true') close();
+      if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') close();
     });
 
     window.addEventListener('resize', function () {
@@ -200,12 +221,7 @@
     });
   }
 
-  /* ══ 6. TALLY MODALS ═════════════════════════════════════════════════
-     Each modal builds its iframe from TALLY on first open, so the form URL
-     lives in exactly one place. If that URL is still a placeholder, or the
-     Tally widget never loads, the dialog shows a written fallback with a
-     direct link instead of an empty box.
-  ══════════════════════════════════════════════════════════════════════ */
+  /* ══ 6. TALLY EMBEDS ═════════════════════════════════════════════════ */
 
   var tallyScriptRequested = false;
   var tallyWidgetLoaded = false;
@@ -214,21 +230,15 @@
     if (tallyScriptRequested) return;
     tallyScriptRequested = true;
 
-    if (document.querySelector('script[src*="tally.so"]')) {
-      tallyWidgetLoaded = true;
-      return;
-    }
+    if (document.querySelector('script[src*="tally.so"]')) { tallyWidgetLoaded = true; return; }
 
     var script = document.createElement('script');
     script.src = 'https://tally.so/widgets/embed.js';
     script.async = true;
     script.onload = function () {
       tallyWidgetLoaded = true;
-      if (typeof window.Tally !== 'undefined' && window.Tally.loadEmbeds) {
-        window.Tally.loadEmbeds();
-      } else {
-        showEmbedFallbacks();
-      }
+      if (window.Tally && window.Tally.loadEmbeds) { window.Tally.loadEmbeds(); }
+      else { showEmbedFallbacks(); }
     };
     script.onerror = showEmbedFallbacks;
     document.body.appendChild(script);
@@ -253,12 +263,7 @@
       if (!iframe || !fallback) return;
 
       var url = TALLY[key];
-      if (!isConfigured(url)) {
-        // Not configured yet: leave the written fallback on screen.
-        iframe.hidden = true;
-        fallback.hidden = false;
-        return;
-      }
+      if (!isConfigured(url)) { iframe.hidden = true; fallback.hidden = false; return; }
 
       iframe.setAttribute('data-tally-src', withParams(url, trackingFor('landing_' + key)));
       fallback.hidden = true;
@@ -266,20 +271,26 @@
 
     loadTallyWidget();
 
-    // If the widget never identifies itself, fall back to the written links.
     window.setTimeout(function () {
       if (typeof window.Tally === 'undefined') showEmbedFallbacks();
     }, 6000);
   }
 
-  function initTallyModal() {
+  /* ══ 7. MODALS ═══════════════════════════════════════════════════════
+     Waitlist form, enquiry form and the enlarged video player share one
+     dialog behaviour: focus moves in, Tab stays inside, Escape closes, focus
+     returns to the trigger, and the backdrop cancels.
+  ══════════════════════════════════════════════════════════════════════ */
+
+  var MODAL_FOR_TRIGGER = { waitlist: 'waitlistModal', contact: 'contactModal' };
+
+  function initModals() {
     var modals = Array.prototype.slice.call(document.querySelectorAll('.modal'));
     if (!modals.length) return;
 
-    var openButton = null;
     var lastFocus = null;
 
-    function configure(modal) {
+    function configureTally(modal) {
       var iframe = modal.querySelector('iframe[data-tally-iframe]');
       if (!iframe) return;
       var src = iframe.getAttribute('data-tally-src');
@@ -290,40 +301,60 @@
       if (fallback) fallback.hidden = true;
     }
 
-    function open(modal) {
-      lastFocus = document.activeElement;
+    function openVideo(modal) {
+      var dialog = modal.querySelector('.modal__dialog');
+      var player = modal.querySelector('video');
+
+      if (player) {
+        player.currentTime = 0;
+        var attempt = player.play();
+        if (attempt && typeof attempt.catch === 'function') { attempt.catch(function () {}); }
+      }
+
+      if (animeReady() && !prefersReducedMotion() && dialog) {
+        window.anime.animate(dialog, {
+          opacity: [0, 1], scale: [0.94, 1], duration: 380, ease: ease(3)
+        });
+      }
+    }
+
+    function open(modal, trigger) {
+      lastFocus = trigger || document.activeElement;
       modal.hidden = false;
       document.body.classList.add('modal-open');
 
-      configure(modal);
+      configureTally(modal);
       loadTallyWidget();
-      if (tallyWidgetLoaded && typeof window.Tally !== 'undefined' && window.Tally.loadEmbeds) {
-        window.Tally.loadEmbeds();
-      }
+      if (tallyWidgetLoaded && window.Tally && window.Tally.loadEmbeds) { window.Tally.loadEmbeds(); }
 
-      var closeBtn = modal.querySelector('[data-modal-close]');
-      if (closeBtn) closeBtn.focus();
+      if (modal.classList.contains('modal--video')) openVideo(modal);
+
+      var focusTarget = modal.querySelector('.modal__dialog button, .modal__dialog a[href], .modal__dialog video');
+      if (focusTarget) focusTarget.focus();
     }
 
     function close(modal) {
+      // Never leave audio playing behind a closed dialog.
+      Array.prototype.forEach.call(modal.querySelectorAll('video'), function (v) { v.pause(); });
       modal.hidden = true;
       document.body.classList.remove('modal-open');
-      var focusTarget = lastFocus && lastFocus.isConnected ? lastFocus : openButton;
-      if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
-    }
-
-    function openModalFor(button) {
-      var id = button.getAttribute('data-tally-open');
-      var modal = document.getElementById(id === 'contact' ? 'contactModal' : 'waitlistModal');
-      if (!modal) return;
-      openButton = button;
-      open(modal);
+      if (lastFocus && lastFocus.isConnected) lastFocus.focus();
+      else {
+        var fallbackTrigger = document.querySelector('[data-video-open]');
+        if (fallbackTrigger) fallbackTrigger.focus();
+      }
     }
 
     Array.prototype.forEach.call(
-      document.querySelectorAll('[data-tally-open], [data-open-contact]'),
+      document.querySelectorAll('[data-tally-open], [data-open-contact], [data-video-open]'),
       function (button) {
-        button.addEventListener('click', function () { openModalFor(button); });
+        button.addEventListener('click', function () {
+          var id = button.getAttribute('data-tally-open');
+          var videoKey = button.getAttribute('data-video-open');
+          var targetId = videoKey ? 'videoModal' : MODAL_FOR_TRIGGER[id];
+          var modal = targetId ? document.getElementById(targetId) : null;
+          if (modal) open(modal, button);
+        });
       }
     );
 
@@ -332,12 +363,11 @@
         el.addEventListener('click', function () { close(modal); });
       });
 
-      // Tab stays inside the dialog while it is open.
       modal.addEventListener('keydown', function (event) {
         if (event.key !== 'Tab') return;
         var dialog = modal.querySelector('.modal__dialog');
         var focusables = Array.prototype.filter.call(
-          dialog.querySelectorAll('a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'),
+          dialog.querySelectorAll('a[href], button:not([disabled]), iframe, video, [tabindex]:not([tabindex="-1"])'),
           function (el) { return el.offsetParent !== null; }
         );
         if (!focusables.length) return;
@@ -354,7 +384,161 @@
     });
   }
 
-  /* ══ 7. FOOTER YEAR ══════════════════════════════════════════════════ */
+  /* ══ 8. MOTION ═══════════════════════════════════════════════════════
+     Six elements, six different transitions — no shared in/out pair:
+       logo                fade up, once, on page load
+       hero panel          rise + fade, then its meters fill and rows settle
+       recommendation card slide in from the left
+       cutoff table        rows drop in, staggered 55ms
+       demo video          zoom out from 96%
+       enlarged player     scale from 94% (in openVideo above)
+  ══════════════════════════════════════════════════════════════════════ */
+
+  function animateLogo() {
+    var logo = document.querySelector('.brand__logo');
+    if (!logo) return;
+    logo.classList.add('logo-in');
+    if (!animeReady() || prefersReducedMotion()) { revealNow([logo]); return; }
+
+    window.anime.animate(logo, {
+      opacity:    [0, 1],
+      translateY: [10, 0],
+      duration:   620,
+      delay:      120,
+      ease:       ease(4),
+      onComplete: function () { logo.classList.add('motion-done'); }
+    });
+  }
+
+  function animatePanel() {
+    var panel = document.querySelector('.panel');
+    if (!panel) return;
+    panel.classList.add('rise-in');
+
+    if (!animeReady() || prefersReducedMotion()) { revealNow([panel]); return; }
+
+    window.anime.animate(panel, {
+      opacity:    [0, 1],
+      translateY: [24, 0],
+      duration:   680,
+      delay:      220,
+      ease:       ease(3),
+      onComplete: function () { panel.classList.add('motion-done'); }
+    });
+
+    // The meters fill after the panel arrives, so it reads as live rather
+    // than as a static picture.
+    var meter = panel.querySelector('.panel__meter-fill');
+    var bars  = panel.querySelectorAll('.panel__bar-fill');
+    var delay = 620;
+
+    if (meter) {
+      var target = meter.style.width || '0%';
+      meter.style.width = '0%';
+      window.anime.animate(meter, {
+        width: [0, target], duration: 1100, delay: delay, ease: ease(4)
+      });
+    }
+
+    if (bars.length) {
+      Array.prototype.forEach.call(bars, function (b) { b.style.transformOrigin = 'left center'; });
+      window.anime.animate(bars, {
+        scaleX:   [0, 1],
+        duration: 820,
+        delay:    window.anime.stagger(90, { start: delay + 200 }),
+        ease:     ease(4)
+      });
+    }
+  }
+
+  function animateSlideIn(node) {
+    node.classList.add('slide-in');
+    if (!animeReady() || prefersReducedMotion()) { revealNow([node]); return; }
+    window.anime.animate(node, {
+      opacity:    [0, 1],
+      translateX: [-18, 0],
+      duration:   620,
+      ease:       ease(3),
+      onComplete: function () { node.classList.add('motion-done'); }
+    });
+  }
+
+  function animateRows(table) {
+    var rows = table.querySelectorAll('tbody tr');
+    if (!rows.length) return;
+    table.classList.add('rows-in');
+    if (!animeReady() || prefersReducedMotion()) { revealNow([table]); return; }
+
+    window.anime.animate(rows, {
+      opacity:    [0, 1],
+      translateY: [-10, 0],
+      duration:   520,
+      delay:      window.anime.stagger(55),
+      ease:       ease(3),
+      onComplete: function () { table.classList.add('motion-done'); }
+    });
+  }
+
+  function animateZoomIn(node) {
+    node.classList.add('zoom-in');
+    if (!animeReady() || prefersReducedMotion()) { revealNow([node]); return; }
+    window.anime.animate(node, {
+      opacity:  [0, 1],
+      scale:    [0.96, 1],
+      duration: 700,
+      ease:     ease(3),
+      onComplete: function () { node.classList.add('motion-done'); }
+    });
+  }
+
+  function initMotion() {
+    animateLogo();
+
+    var jobs = [];
+    var panel = document.querySelector('.panel');
+    var card  = document.querySelector('.rec');
+    var table = document.querySelector('.table-wrap');
+    var video = document.querySelector('.demo__frame');
+
+    if (panel) jobs.push({ node: panel, run: animatePanel });
+    if (card)  jobs.push({ node: card,  run: function () { animateSlideIn(card); } });
+    if (table) jobs.push({ node: table, run: function () { animateRows(table); } });
+    if (video) jobs.push({ node: video, run: function () { animateZoomIn(video); } });
+
+    if (!jobs.length) return;
+
+    // No observer, no anime, or reduced motion: nothing must ever be left
+    // invisible, so reveal everything without animating.
+    if (!('IntersectionObserver' in window) || !animeReady() || prefersReducedMotion()) {
+      jobs.forEach(function (job) { job.done = true; revealNow([job.node]); });
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var job = null;
+        for (var i = 0; i < jobs.length; i++) { if (jobs[i].node === entry.target) job = jobs[i]; }
+        if (!entry.isIntersecting || !job || job.done) return;
+        job.done = true;
+        job.run();
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+
+    jobs.forEach(function (job) { observer.observe(job.node); });
+
+    // Safety net: if the observer never fires for something already on screen,
+    // reveal it rather than leaving a blank space.
+    window.setTimeout(function () {
+      jobs.forEach(function (job) {
+        if (job.done) return;
+        var rect = job.node.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) { job.done = true; job.run(); }
+      });
+    }, 2500);
+  }
+
+  /* ══ 9. FOOTER YEAR ══════════════════════════════════════════════════ */
 
   function initYear() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-year]'), function (el) {
@@ -369,7 +553,8 @@
     initMobileNav();
     initFaq();
     initEmbeds();
-    initTallyModal();
+    initModals();
+    initMotion();
     initYear();
   }
 

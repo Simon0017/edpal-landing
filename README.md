@@ -13,16 +13,18 @@ their parents, and the teachers and schools who would pilot it.
 
 | File | Purpose |
 |---|---|
-| `index.html` | The landing page. All fourteen sections: header, hero, credibility strip, problem, how it works, capabilities, career-matching preview, audiences, roadmap, team, FAQ, waitlist, partner enquiry, footer. Both Tally forms open in modals at the foot of the file. |
+| `index.html` | The landing page. Header, hero (classroom photo + results panel), credibility strip, problem, how it works with the demo video, capabilities, career-matching preview, audiences, roadmap, team, FAQ, waitlist, partner enquiry, footer, and three dialogs (two Tally forms + enlarged video). |
 | `thanks.html` | Post-submit confirmation. Point Tally's "redirect on submit" here. |
 | `privacy.html` | **Placeholder.** Explains what the waitlist collects and what the policy still has to cover. Not a policy. Linked from the form consent text and the footer. |
 | `terms.html` | **Placeholder.** Lists what the real terms must settle. Linked from the footer. |
-| `css/tokens.css` | Design tokens copied from the product dashboard, plus the dark theme and the fixed-dark hero tokens. One deviation is annotated in the file. |
+| `css/tokens.css` | Design tokens, dark theme, the fixed-dark hero tokens, the font stack and the type scale. Deviations from the product dashboard are annotated in the file. |
 | `css/main.css` | Layout, components and all sections. Numbered sections at the top, responsive at 1200 / 900 / 640px. |
-| `js/main.js` | Tally config + embeds, attribution parameters, theme toggle, mobile nav, FAQ accordion, contact modal, footer year. |
-| `assets/logo.png` | The real EdPal logo (540×411, transparent). Copied from the product repo: `core/static/core/img/edpal-logo.png`. |
-| `assets/hero/` | Empty. Left empty on purpose — see §6. |
-| `assets/screenshots/` | Empty. The hero falls back to a token-built product panel; see §6. |
+| `js/main.js` | Tally config + embeds, attribution, reduced-motion guard, theme toggle, mobile nav, FAQ accordion, all three modals, motion, footer year. |
+| `assets/logo.png` | The real EdPal logo (540×411, transparent). From the product repo: `core/static/core/img/edpal-logo.png`. |
+| `assets/hero.jpg` | Hero background photograph: a Kenyan secondary classroom. 1279×854, 111.6 KB. **Attribution still owed — see §5.** |
+| `assets/EdPal.mp4` | Product demo. 16.2 s, 1280×532 (2.41:1), H.264 plus one audio track, 2.51 MB. |
+| `assets/poster/poster.png` | Video poster frame. 1920×1080, 743 KB. **Has burnt-in video-editor chrome and a mouse cursor — see §5.** |
+| `assets/screenshots/` | Empty. The hero uses the token-built results panel instead; see §6. |
 | `assets/icons/` | Empty. All UI icons are inline SVG in `index.html`, so they inherit `currentColor` and cost nothing to load. |
 
 ---
@@ -37,8 +39,7 @@ python -m http.server 8000
 Then open <http://localhost:8000>.
 
 Serve it over HTTP, not `file://`. Opening `index.html` directly may work for the
-layout, but browsers block or mis-size cross-origin iframes from `file://`, so the
-Tally forms inside `index.html` and the contact modal will not appear.
+layout, but browsers block or mis-size cross-origin iframes from `file://`, so theTally forms inside `index.html` and the contact modal will not appear.
 
 All asset paths are relative with no leading `/`, so the folder can be dropped at any
 path on any host — `example.com/`, `example.com/edpal/`, a GitHub Pages subpath — without
@@ -142,7 +143,6 @@ list has been filled with a plausible-looking invented value.
 | Placeholder | Where |
 |---|---|
 | `[target date]` | Roadmap, "Where we are now" — twice (piloting, public launch) |
-| `[year]` ×3, `[cutoff]` ×3 | Career-matching section, the cluster cutoff table |
 
 **Silent, markup-only** — change `data-optional="pending"` to `data-optional="filled"` to show it:
 
@@ -154,20 +154,26 @@ list has been filled with a plausible-looking invented value.
 
 | Placeholder | Where |
 |---|---|
+| **Hero photo attribution** | **Owed. Nothing is credited on the page yet because the photographer and source were not supplied.** Pexels and Unsplash both require attribution as a condition of use. Tell me the photographer name and photo URL and I will add a discreet credit — in the footer, or as a small line at the bottom of the hero. This is a licensing obligation, not a nicety. |
 | `assets/logo.png` as the Open Graph image | `index.html` `<head>`. A 1200×630 image is needed; the logo is a stopgap so `og:image` is not empty. |
 | Founder bio | `index.html`, team section — currently a factual one-liner about the role. |
 | CTO bio | Same. |
 | `hello@edpal.co.ke` | Footer, thanks page, both form fallbacks, privacy and terms pages. Confirm the mailbox works before launch. |
-| Canonical URL `https://edpal.co.ke/` and `og:url` | `index.html` `<head>`. |
+| Canonical URL `https://edpal.co.ke/` and `og:url` | `index.html` `<head>`. Was `href="#"`, which de-indexes the page; now set to a placeholder host that must be corrected to the live URL. |
 | Social profile URLs | *Intentionally absent.* No verified profile URLs were supplied, so **no social icons exist anywhere on the page** — an icon pointing at `#` is worse than no icon. Add them only with real URLs. |
+
+**Added by the team, not authored here — verify before launch:**
+
+| Item | Why it needs checking |
+|---|---|
+| Cluster 7 cutoff figures (2025: 34.046, 2024: 32.452, 2023: 31.181) | These appeared in `index.html` outside this build. I did not write them and could not verify them against a KUCCPS source in this environment. If they are real, the illustrative note next to the table should say so and name the source; if they are examples, they need to be marked as such. |
+| Tally waitlist URL `Npepop` | Wired into `TALLY.waitlist`. Test one submission end to end. |
 
 **Fixed in the page, worth a second look:**
 
 - The hero panel and the career-matching card are **illustrative**. Both carry a visible
   note saying so. Their numbers are examples; the career, cluster and course names come
   from the KUCCPS-aligned data set.
-- The cluster-cutoff table has no numbers at all yet — only its structure and
-  `[year]` / `[cutoff]` cells.
 
 ---
 
@@ -212,6 +218,10 @@ does not contradict the copy** — if it shows something EdPal cannot do, do not
    waitlist URL is already set), hidden fields added to both forms, redirect to
    `thanks.html` set, and one test submission per form.
 8. **Confirmed contact mailbox** for `hello@edpal.co.ke`.
+9. **Hero photo attribution** — see §5. Required by both Pexels and Unsplash.
+10. **A clean poster frame** for the video, plus confirmation that the recording still
+    matches the page. See §6.
+11. **The cluster cutoff figures verified** against a KUCCPS source — see §5.
 
 ---
 
@@ -226,22 +236,48 @@ does not contradict the copy** — if it shows something EdPal cannot do, do not
   for the 11.5–14px text they are used for here. The replacements measure 4.88:1 and
   4.73:1. The dashboard is untouched. If the product re-tunes these tokens, re-run the
   contrast check before copying them back.
+- **Fonts** were changed on request from the system stack to **Plus Jakarta Sans**
+  (headings, 500/600/700) plus **Nunito Sans** (body, 400/500/600), loaded from Google
+  Fonts, with the system stack retained as fallback and JetBrains Mono still numbers-only.
+  The reasoning is in `css/tokens.css`. The whole type scale was retuned for the new
+  metrics. To go back to zero webfonts, remove the two families from the Google Fonts link
+  and point `--alt-font` / `--alt-display` at the system stack — but expect to re-tune
+  every size, because Nunito Sans has a smaller x-height than Segoe UI or Roboto.
 - **Theme contract** matches the product exactly: `localStorage["reg_theme"]`, where
   `"light"` means light and anything else means dark, applied as `<html class="theme-dark">`.
   The anti-flash script is inline in `<head>` above the stylesheets, wrapped in
-  `try/catch` because storage can be unavailable.
-- **Single dark surface.** The hero band is a flat, solid navy (`#141C2F`) — no gradient.
-  *This was changed after review:* the first draft used the product's navy radial-gradient
-  treatment, which at full page width read as decoration and made the page feel generated.
-  There is now **no gradient anywhere on the site**. The page background is flat `--alt-bg`
-  or `--alt-surface-mut`; the product panel inside the hero uses its own fixed dark tokens
-  so it reads as a screen sitting on the band rather than as more band.
-- **One primary button per screenful.** The hero and the waitlist section each have one;
-  every other call to action is secondary or ghost.
-- **Both Tally dialogs use a fixed light shell**, independent of `html.theme-dark`, because
-  Tally renders its own light palette. See §3.
-- **No webfonts other than JetBrains Mono**, at weights 400 and 500, used only for
-  numbers. UI text uses the system stack.
-- **No JavaScript dependencies.** `js/main.js` is plain ES5-compatible-style modern JS
-  with no imports. It loads with `defer`.
-- **Reduced motion** turns off every transition and the smooth scroll.
+  `try/catch` because storage can be unavailable. The same script sets `html.js-motion`.
+- **The hero** is the classroom photograph (`assets/hero.jpg`) with a directional scrim
+  over it and the token-built results panel on top. The scrim is the only gradient on the
+  site and it is functional: it holds white text at WCAG AA over a photograph whose left
+  third measures 0.19 average luminance and 0.47 at the 90th percentile. The left 38% of
+  the scrim is solid `#141C2F`. **Do not lighten it without re-running the contrast
+  check** — the 11.5px status line only clears 4.5:1 against the solid region. There is a
+  `@supports not (background: color-mix(...))` fallback for browsers without `color-mix`.
+- **Motion** uses **anime.js v4** from jsDelivr (UMD build, pinned to 4.2.2, exposes
+  `window.anime`). v4 changed the API from v3: `anime()` is now `animate()`. Six elements
+  animate, each with its own distinct transition, as requested: the logo fades up on load,
+  the hero panel rises and then its meters fill and its subscore bars stagger, the
+  recommendation card slides in from the left, the cut-off table's rows drop in staggered
+  by 55ms, the demo frame zooms out from 96%, and the enlarged player scales from 94%.
+  Scroll reveals use one `IntersectionObserver` at threshold 0.15, and each element is
+  unobserved after it fires.
+- **The motion fallback chain matters.** Elements that anime.js will animate start hidden
+  only under `html.js-motion`, which the inline `<head>` script sets. If anime.js fails to
+  load, if `IntersectionObserver` is missing, or if the user prefers reduced motion,
+  `js/main.js` reveals every element immediately instead of animating it. There is also a
+  2.5-second safety timer for anything already on screen. **Nothing is ever left invisible
+  because a script or a CDN did not arrive.**
+- **Reduced motion is guarded in JavaScript, not only CSS.** The
+  `@media(prefers-reduced-motion)` block neutralises CSS transitions, but anime.js writes
+  inline styles and would ignore it entirely, so every animation checks `matchMedia` first.
+- **One primary button per screenful.** The hero, the waitlist section and the mobile nav
+  each have one; every other call to action is secondary or ghost.
+- **All three dialogs share one behaviour:** focus moves in, Tab stays inside, Escape
+  closes, focus returns to the trigger, the backdrop cancels. Closing the enlarged video
+  also pauses it, so audio never keeps playing behind a closed dialog.
+- **The demo video** is 1280×532 (2.41:1), so the frame uses the video's own
+  `aspect-ratio` rather than 16:9, and `preload="none"` keeps 2.5 MB off the initial load.
+  The poster is the only video asset fetched up front.
+- **No npm, no build step.** `js/main.js` is plain modern JS with no imports and no
+  bundler; anime.js is a CDN `<script>` tag.

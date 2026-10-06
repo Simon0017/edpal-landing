@@ -1,9 +1,9 @@
 /* ==========================================================================
    EdPal landing page — design tokens
    --------------------------------------------------------------------------
-   Source of truth: accounts/static/accounts/css/dashboard_alt.css in the main
-   EdPal product repository ("Pathfinder" learner dashboard). Values are copied
-   verbatim. Do not introduce new colours here; if the product adds a token,
+   Colour source of truth: accounts/static/accounts/css/dashboard_alt.css in the
+   main EdPal product repository ("Pathfinder" learner dashboard). Values are
+   copied from there. Do not introduce new colours; if the product adds a token,
    add it to both files together.
 
    Themes
@@ -12,9 +12,8 @@
               read from localStorage key "reg_theme" — "light" means light,
               anything else means dark)
 
-   One exception is deliberate: the hero band and the product panel inside it
-   are dark in BOTH themes (see --hp-* below). That is the single dark surface
-   on the page, as specified in the brief.
+   One area is deliberately fixed: the hero band and the product panel inside it
+   are dark in BOTH themes (see --hp-* below).
    ========================================================================== */
 
 :root {
@@ -43,13 +42,10 @@
   --alt-text:        #101828;
 
   /* Deviation from dashboard_alt.css (#667085 / #98A2B3), deliberate and
-     annotated: both of those fail WCAG AA for normal-size text against
-     --alt-surface-mut, and --alt-text-muted fails against every light surface
-     (2.43:1 on --alt-bg). Landing-page copy is read by parents and by learners
-     on low-quality screens, so the two supporting greys are darkened here to
-     5.58:1 and 6.37:1 on --alt-surface-mut. The product's values remain
-     unchanged in the dashboard. If the product re-tunes these tokens, re-run
-     the contrast check before copying them back. */
+     annotated: both fail WCAG AA for normal-size text against --alt-surface-mut.
+     Landing-page copy is read by parents and by learners on low-quality screens,
+     so the supporting greys are darkened here to 4.88:1 and 4.73:1 on
+     --alt-surface-mut. The product's values are unchanged in the dashboard. */
   --alt-text-2:      #5D6B7F;
   --alt-text-muted:  #5F6D82;
 
@@ -68,21 +64,42 @@
   --alt-max: 1440px;
   --alt-pad: 32px;
 
-  /* ── Type ──────────────────────────────────────────────────────────── */
-  --alt-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-              "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  /* ── Type ─────────────────────────────────────────────────────────────
+     Fonts changed on request from the original system stack. Rationale: the
+     audience is 12-18 year olds plus their parents, and a flat system stack
+     reads institutional. Plus Jakarta Sans is geometric like the logo mark
+     but with softened terminals, so it harmonises with it rather than
+     fighting it; Nunito Sans stays legible at body size, where a rounded
+     face would not. JetBrains Mono is unchanged and still used ONLY for
+     numbers, dates, scores and counts.
+
+     To go back to zero webfonts: delete the two Google Fonts families from
+     index.html and point --alt-font / --alt-display at the system stack.
+     Every size below is tuned to these metrics, so expect to re-tune.
+     -------------------------------------------------------------------- */
+  --alt-font: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+              Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --alt-display: "Plus Jakarta Sans", "Nunito Sans", -apple-system,
+              BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+              sans-serif;
   --alt-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
               monospace;
   --alt-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
 
-  --fs-page-title: clamp(28px, 4vw, 40px);
+  /* Type scale, retuned for Nunito Sans (smaller x-height than Segoe UI or
+     Roboto): body steps up 0.5px and negative tracking eases by ~0.004em so
+     headings do not look pinched. */
+  --fs-page-title: clamp(29px, 4vw, 41px);
   --fs-section:    clamp(22px, 2.4vw, 28px);
-  --fs-lead:       16.5px;
-  --fs-body:       15px;
-  --fs-support:    14px;
-  --fs-small:      13px;
+  --fs-lead:       17px;
+  --fs-body:       15.5px;
+  --fs-support:    14.5px;
+  --fs-small:      13.5px;
   --fs-label:      12.5px;
   --fs-pill:       11.5px;
+
+  --track-title: -0.021em;
+  --track-ui:    -0.008em;
 
   /* ── Section rhythm ────────────────────────────────────────────────── */
   --section-pad: 88px;
@@ -124,29 +141,42 @@ html.theme-dark {
   --alt-shadow-lg: 0 16px 45px rgba(0, 0, 0, .55);
 }
 
-/* ── Fixed dark surface: hero band ---------------------------------------
-   The hero band and the product panel sitting on it are navy in both themes.
-   These tokens are therefore defined once and never remapped by theme-dark —
-   white-on-navy copy stays legible either way.
-
-   The band is a FLAT colour by design. An earlier draft used the product's
-   navy radial-gradient treatment; at full page width it read as decorative and
-   gave the page a generated feel. One solid navy, no gradient.
+/* ── Fixed dark surface: hero band ───────────────────────────────────────
+   The hero is a photograph under a directional scrim, dark in both themes.
+   These tokens are defined once and never remapped by theme-dark, so
+   white-on-scrim copy stays legible either way.
    ------------------------------------------------------------------------ */
 
 :root {
-  --hp-hero-bg: #141C2F;
+  --hp-hero-solid: #141C2F;
+
+  /* The one gradient on the site, and it is functional rather than decorative:
+     it exists to hold white text at WCAG AA over a bright classroom photo
+     (measured average luminance 0.19, 90th percentile 0.47). The left 38% is
+     solid, then it falls away so the students and the windows stay visible on
+     the right. Do not lighten the left end without re-running the contrast
+     check: the 11.5px status line only clears 4.5:1 against the solid region.
+     Falls back to --hp-hero-solid where color-mix is unsupported. */
+  --hp-hero-scrim:
+    linear-gradient(90deg,
+      #141C2F 0%,
+      #141C2F 38%,
+      color-mix(in srgb, #141C2F 82%, transparent) 54%,
+      color-mix(in srgb, #141C2F 60%, transparent) 70%,
+      color-mix(in srgb, #141C2F 42%, transparent) 100%);
 
   --hp-on-dark:       #FFFFFF;
-  --hp-on-dark-2:     rgba(255, 255, 255, .72);
-  --hp-on-dark-muted: rgba(255, 255, 255, .58);
+  --hp-on-dark-2:     rgba(255, 255, 255, .76);
+  --hp-on-dark-muted: rgba(255, 255, 255, .62);
   --hp-on-dark-line:  rgba(255, 255, 255, .12);
   --hp-on-dark-fill:  rgba(255, 255, 255, .07);
 
   /* Panel surface inside the hero — a step darker than the band so the panel
-     reads as a distinct screen rather than more band. */
+     reads as a distinct screen rather than more band. Very slightly
+     translucent so a trace of the photograph sits behind it. */
   --hp-panel:      #0E1626;
   --hp-panel-2:    #141E33;
+  --hp-panel-open: rgba(14, 22, 38, .94);
   --hp-panel-line: rgba(255, 255, 255, .09);
 
   /* On the navy band and in dark mode the deep blue in the logo (#0A5599)

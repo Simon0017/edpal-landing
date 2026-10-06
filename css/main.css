@@ -40,11 +40,37 @@ body {
   font-family: var(--alt-font);
   font-size: var(--fs-body);
   line-height: 1.5;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--track-ui);
   color: var(--alt-text);
   background: var(--alt-bg);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Headings use the display family. Numbers stay in JetBrains Mono via .mono. */
+h1, h2, h3, h4,
+.section-title, .hero__title, .aud__title, .modal__title, .step__title,
+.cap__title { font-family: var(--alt-display); }
+
+/* ── Motion primitives ──────────────────────────────────────────────────
+   Animated elements start hidden, but ONLY once the inline script in <head>
+   confirms the runtime can see them (it adds `html.js-motion`). With no
+   JavaScript the page renders fully visible and completely static, and the
+   @media block below neutralises both states without JS as well.
+   .motion-done is the resting state after an animation finishes.
+   ---------------------------------------------------------------------- */
+html.js-motion .rise-in,
+html.js-motion .slide-in,
+html.js-motion .rows-in,
+html.js-motion .logo-in,
+html.js-motion .zoom-in { opacity: 0; }
+
+html.motion-off .rise-in,
+html.motion-off .slide-in,
+html.motion-off .rows-in,
+html.motion-off .logo-in,
+html.motion-off .zoom-in { opacity: 1; }
+
+.motion-done { opacity: 1 !important; }
 
 img { max-width: 100%; display: block; }
 
@@ -344,11 +370,51 @@ html.theme-dark .theme-toggle__icon--moon { display: block; }
 
 /* ══ 04 HERO BAND + PRODUCT PANEL ══════════════════════════════════════ */
 
+/* The photograph is the band's background; the scrim sits on top of it and
+   under the copy. assets/hero.jpg is 1279x854 with the copy zone falling on
+   the left, where the scrim is solid. */
 .hero {
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   color: var(--hp-on-dark);
-  background: var(--hp-hero-bg);
+  background-color: var(--hp-hero-solid);
+  background-image: var(--hp-hero-scrim), url("../assets/hero.jpg");
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  background-size: 100% 100%, cover;
+}
+
+/* Without color-mix support the scrim token fails to parse and both layers
+   would drop, leaving bare photo behind 15px white text. This puts a solid
+   photographic treatment back for those browsers. */
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .hero { background-image: linear-gradient(90deg, #141C2F 0%, #141C2F 46%,
+          rgba(20, 28, 47, .72) 100%), url("../assets/hero.jpg"); }
+}
+
+/* Narrow viewports are the hard case: the results panel stacks below the copy,
+   so the headline and body text run across almost the full image width instead
+   of sitting in the solid left third. Measured without this, white body text
+   fell to 3.27:1 and the 76% tone to 2.56:1 over the bright window in the upper
+   right — both below AA. A near-opaque scrim is the honest fix: the photo
+   becomes texture at this size, which beats unreadable copy. */
+@media (max-width: 900px) {
+  .hero {
+    background-image:
+      linear-gradient(90deg,
+        #141C2F 0%,
+        color-mix(in srgb, #141C2F 94%, transparent) 42%,
+        color-mix(in srgb, #141C2F 84%, transparent) 68%,
+        color-mix(in srgb, #141C2F 82%, transparent) 100%),
+      url("../assets/hero.jpg");
+  }
+
+  @supports not (background: color-mix(in srgb, red 50%, transparent)) {
+    .hero { background-image: linear-gradient(90deg, #141C2F 0%,
+            rgba(20, 28, 47, .9) 55%, rgba(20, 28, 47, .82) 100%),
+            url("../assets/hero.jpg"); }
+  }
 }
 
 .hero__inner {
@@ -382,9 +448,9 @@ html.theme-dark .theme-toggle__icon--moon { display: block; }
 
 .hero__title {
   font-size: var(--fs-page-title);
-  font-weight: 600;
-  line-height: 1.14;
-  letter-spacing: -0.024em;
+  font-weight: 700;
+  line-height: 1.13;
+  letter-spacing: var(--track-title);
   margin-bottom: 18px;
 }
 
@@ -415,7 +481,10 @@ html.theme-dark .theme-toggle__icon--moon { display: block; }
   position: relative;
   z-index: 1;
   isolation: isolate;
-  background: var(--hp-panel);
+  /* Semi-transparent so a trace of the classroom photograph sits behind the
+     product panel without touching the legibility of the panel's own text. */
+  background: var(--hp-panel-open);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--hp-panel-line);
   border-radius: var(--alt-r-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, .42);
@@ -591,17 +660,26 @@ html.theme-dark .theme-toggle__icon--moon { display: block; }
 
 /* ══ 07 HOW IT WORKS ═══════════════════════════════════════════════════ */
 
+/* Steps on the left, demo video on the right. Single column of steps so the
+   numbered sequence reads straight down next to the video. */
+.how__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: 56px;
+  align-items: start;
+}
+
 .steps {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 56px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .step {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 18px;
-  padding: 24px 0;
+  padding: 20px 0;
   border-top: 1px solid var(--alt-border);
 }
 
@@ -616,6 +694,58 @@ html.theme-dark .step__num { color: #A5A0FF; }
 
 .step__title { font-size: 16px; font-weight: 500; letter-spacing: -0.015em; margin-bottom: 6px; }
 .step__text { font-size: var(--fs-support); line-height: 1.62; color: var(--alt-text-2); max-width: 480px; }
+
+/* ── Demo video ─────────────────────────────────────────────────────── */
+
+.demo { position: sticky; top: 88px; }
+
+.demo__frame {
+  position: relative;
+  border: 1px solid var(--alt-border);
+  border-radius: var(--alt-r-lg);
+  background: var(--alt-surface);
+  box-shadow: var(--alt-shadow);
+  padding: 10px;
+}
+
+/* 1280x532 is 2.41:1, not 16:9. The aspect-ratio below is the video's own, so
+   the player never letterboxes and the poster (same ratio) does not jump. */
+.demo__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1280 / 532;
+  border-radius: var(--alt-r-md);
+  background: #0E1626;
+  object-fit: cover;
+}
+
+.demo__expand {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: var(--alt-r-pill);
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(14, 22, 38, .72);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: var(--fs-pill);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+.demo__expand:hover { background: rgba(14, 22, 38, .9); border-color: rgba(255, 255, 255, .4); transform: translateY(-1px); }
+.demo__expand svg { width: 14px; height: 14px; }
+
+.demo__note {
+  margin-top: 12px;
+  font-size: var(--fs-pill);
+  line-height: 1.6;
+  color: var(--alt-text-muted);
+}
 
 /* ══ 08 WHAT EDPAL DOES ════════════════════════════════════════════════ */
 
@@ -1092,6 +1222,50 @@ html.theme-dark .footer__links a:hover { color: #C7C3FF; }
 
 body.modal-open { overflow: hidden; }
 
+/* ── Enlarged video dialog ──────────────────────────────────────────────
+   Dark shell regardless of theme: it is a video player, and the frame
+   around a video should not flip to white in light mode.
+   ---------------------------------------------------------------------- */
+
+.modal--video { padding: 24px; }
+
+.modal--video .modal__dialog {
+  width: min(1180px, 100%);
+  background: #0B1220;
+  border-color: rgba(255, 255, 255, .14);
+  color: #EDF0F7;
+  padding: 12px;
+}
+
+.modal--video .icon-btn {
+  border-color: rgba(255, 255, 255, .18);
+  color: rgba(255, 255, 255, .72);
+}
+.modal--video .icon-btn:hover { color: #fff; border-color: rgba(255, 255, 255, .45); }
+
+.modal__video-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 4px 12px;
+}
+
+.modal__video-title { font-size: var(--fs-small); font-weight: 500; color: rgba(255, 255, 255, .82); }
+
+.modal__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1280 / 532;
+  border-radius: var(--alt-r-md);
+  background: #000;
+  object-fit: contain;
+}
+
+/* Scale-in for the enlarged player. Distinct from every other motion on the
+   page, which the brief asked for. */
+.modal--video[data-state="open"] .modal__dialog { opacity: 0; transform: scale(.94); }
+
 /* ── Post-submit page (thanks.html) ─────────────────────────────────── */
 
 .thanks {
@@ -1215,6 +1389,11 @@ body.modal-open { overflow: hidden; }
   .caps { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .team { grid-template-columns: minmax(0, 1fr); }
 
+  /* Steps and video stack; sticking the video on a narrow screen would park
+     it over the steps it is supposed to sit beside. */
+  .how__grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .demo { position: static; }
+
   .footer__top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
   .footer__brand-col { grid-column: 1 / -1; }
 
@@ -1262,6 +1441,10 @@ body.modal-open { overflow: hidden; }
   .modal { padding: 0; align-items: flex-end; }
   .modal__dialog { max-height: 92vh; border-radius: var(--alt-r-lg) var(--alt-r-lg) 0 0; padding: 20px; }
   .modal .tally-embed { min-height: 62vh; }
+
+  .modal--video { padding: 0; }
+  .modal--video .modal__dialog { padding: 10px; border-radius: var(--alt-r-lg) var(--alt-r-lg) 0 0; }
+  .demo__expand { top: 16px; right: 16px; padding: 7px 11px; }
 }
 
 /* ══ MOTION ═══════════════════════════════════════════════════════════ */
@@ -1279,4 +1462,15 @@ body.modal-open { overflow: hidden; }
   .btn:hover,
   .btn--primary:hover,
   .btn--secondary:hover { transform: none; }
+
+  /* Animated elements are hidden only under html.js-motion; this restores them
+     so a reduced-motion visitor gets the full page instantly, and neutralises
+     the pre-animation state without needing the JS to run at all. */
+  html.js-motion .rise-in,
+  html.js-motion .slide-in,
+  html.js-motion .rows-in,
+  html.js-motion .logo-in,
+  html.js-motion .zoom-in { opacity: 1; }
+
+  .modal--video[data-state="open"] .modal__dialog { opacity: 1; transform: none; }
 }
