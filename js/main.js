@@ -27,7 +27,7 @@
 
   var TALLY = {
     waitlist: 'https://tally.so/embed/Npepop',
-    contact:  'https://tally.so/embed/REPLACE_CONTACT_ID'
+    contact:  'https://tally.so/embed/jaOpMY'
   };
 
   var TRACKING = {
@@ -349,9 +349,15 @@
       document.querySelectorAll('[data-tally-open], [data-open-contact], [data-video-open]'),
       function (button) {
         button.addEventListener('click', function () {
-          var id = button.getAttribute('data-tally-open');
-          var videoKey = button.getAttribute('data-video-open');
-          var targetId = videoKey ? 'videoModal' : MODAL_FOR_TRIGGER[id];
+          // Three trigger shapes, resolved explicitly. data-open-contact and
+          // data-video-open are bare attributes with no value, so they cannot
+          // be looked up in MODAL_FOR_TRIGGER the way data-tally-open is —
+          // getAttribute returns "" and the map lookup yields undefined.
+          var targetId;
+          if (button.hasAttribute('data-video-open'))        targetId = 'videoModal';
+          else if (button.hasAttribute('data-open-contact')) targetId = 'contactModal';
+          else targetId = MODAL_FOR_TRIGGER[button.getAttribute('data-tally-open')];
+
           var modal = targetId ? document.getElementById(targetId) : null;
           if (modal) open(modal, button);
         });

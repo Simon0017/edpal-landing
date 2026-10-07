@@ -57,7 +57,7 @@ HTML — the dialogs build their own iframes from this object.
 ```js
 const TALLY = {
   waitlist: "https://tally.so/embed/Npepop",              // ← Form A, already set
-  contact:  "https://tally.so/embed/REPLACE_CONTACT_ID"   // ← Form B, still to paste
+  contact:  "https://tally.so/embed/jaOpMY"   // ← Form B, still to paste
 };
 ```
 
